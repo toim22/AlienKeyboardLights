@@ -16,6 +16,7 @@ Controle de iluminação para o teclado RGB por tecla e as luzes do chassi do **
 - Automation: turn off after idle time, dim on battery, night schedule, start with Windows (tray).
 - Global hotkeys: `Ctrl+Shift+F12` on/off, `F11` next effect, `F8` next theme, `F9`/`F10` brightness down/up.
 - Profiles, optionally activated automatically while a given game/app is in the foreground.
+- Interface in English, Português, Français, Español, 日本語, 简体中文, Deutsch, हिन्दी and Italiano (follows the Windows language; change it with the 🌐 menu at the top right).
 
 ## Supported hardware
 
@@ -34,7 +35,7 @@ No installer and no dependencies: it builds with the C# compiler included in Win
 2. Run `build.bat`.
 3. Open `bin\AlienKeyboardLights.exe`.
 
-The interface is in Portuguese. Closing the window keeps it running in the system tray (animated effects need the program running). Use **Sair** (Exit) in the tray menu to quit. Settings and profiles are stored in `%APPDATA%\AlienKeyboardLights`.
+Closing the window keeps it running in the system tray (animated effects need the program running). Use **Exit** in the tray menu to quit. Settings and profiles are stored in `%APPDATA%\AlienKeyboardLights`.
 
 ## Notes
 
@@ -49,7 +50,7 @@ The interface is in Portuguese. Closing the window keeps it running in the syste
 
 Programa para controlar as luzes do teclado RGB (tecla por tecla) e do chassi do **Alienware Area-51m R2**.
 
-**Recursos:** prévia ao vivo, 20 efeitos (onda, arco-íris, pisca-pisca, Matrix, KITT, visualizador de música, cores da tela, medidores de CPU/RAM/bateria, pintura por tecla e mais), 25 temas incluindo datas comemorativas, luzes do chassi, desligamento por inatividade, modo noturno, redução na bateria, atalhos globais e perfis automáticos por jogo.
+**Recursos:** prévia ao vivo, 20 efeitos (onda, arco-íris, pisca-pisca, Matrix, KITT, visualizador de música, cores da tela, medidores de CPU/RAM/bateria, pintura por tecla e mais), 25 temas incluindo datas comemorativas, luzes do chassi, desligamento por inatividade, modo noturno, redução na bateria, atalhos globais e perfis automáticos por jogo. Interface em 9 idiomas (menu 🌐 no canto superior direito).
 
 **Como usar:** baixe o projeto, rode `build.bat` e abra `bin\AlienKeyboardLights.exe`. Não precisa instalar nada. Fechar a janela deixa o programa na bandeja; para sair, use **Sair** no menu da bandeja.
 

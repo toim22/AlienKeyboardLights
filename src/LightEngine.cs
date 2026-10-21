@@ -24,7 +24,7 @@ namespace AlienKeyboardLights
 
         public readonly int[] Frame = new int[Keys.Length];          // what is shown (after dimming)
         public readonly int[] ChassisFrame = new int[ChassisCount];
-        public volatile string Status = "Procurando teclado...";
+        public volatile string Status = L.T("Procurando teclado...");
         public volatile string Info = "";
         public volatile bool CapsOn, NumOn;      // updated by the UI thread
         public event Action FrameReady;
@@ -115,7 +115,7 @@ namespace AlienKeyboardLights
                     Render(s, t, dt);
                     ApplyOverlays(s, t);
                 }
-                catch (Exception ex) { Info = "Erro no efeito: " + ex.Message; }
+                catch (Exception ex) { Info = L.T("Erro no efeito: ") + ex.Message; }
 
                 // Smooth fade towards the target dimming (off / night / idle / battery).
                 double target = TargetDim(s);
@@ -135,8 +135,8 @@ namespace AlienKeyboardLights
                     if (s.Brightness != sentBrightness) { ok &= keyboard.SetBrightness((byte)(s.Brightness * 255 / 100)); sentBrightness = s.Brightness; }
                     var copy = (int[])Frame.Clone();
                     ok &= keyboard.SetColors(KeyIds, copy);
-                    if (ok) { sentKeys = copy; lastKeySend = t; Status = "Teclado conectado" + (chassis != null ? " · chassi conectado" : ""); }
-                    else { keyboard.Dispose(); keyboard = null; sentBrightness = -1; sentKeys = null; Status = "Teclado parou de responder, reconectando..."; }
+                    if (ok) { sentKeys = copy; lastKeySend = t; Status = L.T("Teclado conectado") + (chassis != null ? L.T(" · chassi conectado") : ""); }
+                    else { keyboard.Dispose(); keyboard = null; sentBrightness = -1; sentKeys = null; Status = L.T("Teclado parou de responder, reconectando..."); }
                 }
 
                 // Chassis: at most ~12 updates per second.
@@ -161,7 +161,7 @@ namespace AlienKeyboardLights
             if (t < nextKeyboardTry) return false;
             nextKeyboardTry = t + 2;
             try { keyboard = AlienFxV5.Open(); } catch { keyboard = null; }
-            if (keyboard == null) { Status = "Teclado AlienFX não encontrado"; return false; }
+            if (keyboard == null) { Status = L.T("Teclado AlienFX não encontrado"); return false; }
             try { keyboard.ClearHardwareEffect(); } catch { }
             return true;
         }
@@ -215,7 +215,7 @@ namespace AlienKeyboardLights
                 case Mode.Ambient: RenderAmbient(t); return;
                 case Mode.CpuMeter: { double v = SystemStats.Cpu(); Info = "CPU " + (int)(v * 100) + "%"; RenderGauge(pal, v); } return;
                 case Mode.RamMeter: { double v = SystemStats.Ram(); Info = "RAM " + (int)(v * 100) + "%"; RenderGauge(pal, v); } return;
-                case Mode.BatteryMeter: { double v = SystemStats.Battery(); Info = "Bateria " + (int)(v * 100) + "%"; RenderGauge(pal, v); } return;
+                case Mode.BatteryMeter: { double v = SystemStats.Battery(); Info = L.T("Bateria ") + (int)(v * 100) + "%"; RenderGauge(pal, v); } return;
                 case Mode.Rain: RenderRain(pal, t, dt, speed); return;
                 case Mode.Starfield: RenderStars(pal, dt, speed); return;
             }
@@ -361,7 +361,7 @@ namespace AlienKeyboardLights
                 for (int c = 0; c < 9; c++) { musicHistory[c] = musicHistory[c + 1]; musicHistory[19 - c] = musicHistory[18 - c]; }
             }
             musicHistory[9] = musicHistory[10] = Math.Max(level, musicHistory[9] * 0.7);
-            Info = "Áudio " + (int)(peak * 100) + "%";
+            Info = L.T("Áudio ") + (int)(peak * 100) + "%";
             for (int i = 0; i < Keys.Length; i++)
             {
                 var k = Keys[i];

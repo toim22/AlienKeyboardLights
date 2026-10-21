@@ -113,11 +113,14 @@ namespace AlienKeyboardLights
         public MainForm(bool startHidden)
         {
             settings.Load();
+            L.Set(settings.Language);
             engine = new LightEngine(settings, settings);
             hiddenStart = startHidden;
 
             Text = "Alien Keyboard Lights";
-            Font = new Font("Segoe UI", 9.5f);
+            // Native UI fonts so CJK and Devanagari text does not fall back glyph by glyph.
+            string fontName = L.Code == "ja" ? "Yu Gothic UI" : L.Code == "zh" ? "Microsoft YaHei UI" : L.Code == "hi" ? "Nirmala UI" : "Segoe UI";
+            Font = new Font(fontName, 9.5f);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Bg; ForeColor = Fg;
             ClientSize = new Size(860, 770);
@@ -133,7 +136,7 @@ namespace AlienKeyboardLights
             for (int i = 0; i < tabs.Length; i++)
             {
                 int index = i;
-                var b = MakeButton(tabs[i], 16 + i * 128, 278, 122);
+                var b = MakeButton(L.T(tabs[i]), 16 + i * 128, 278, 122);
                 b.Click += (s, e) => SelectTab(index);
                 tabButtons.Add(b); Controls.Add(b);
                 var p = new Panel { Location = new Point(16, 324), Size = new Size(828, 380), Visible = false };
@@ -146,12 +149,27 @@ namespace AlienKeyboardLights
             BuildProfilesTab(tabPanels[4]);
             SelectTab(0);
 
-            powerBtn = MakeButton("", 16, 718, 150);
+            powerBtn = MakeButton("", 16, 718, FitWidth(150, L.T("Desligar luzes"), L.T("Ligar luzes")));
             powerBtn.Click += (s, e) => ToggleLights();
-            var trayBtn = MakeButton("Minimizar p/ bandeja", 176, 718, 170);
+            var trayBtn = MakeButton(L.T("Minimizar p/ bandeja"), powerBtn.Right + 10, 718, FitWidth(170, L.T("Minimizar p/ bandeja")));
             trayBtn.Click += (s, e) => HideToTray();
-            statusLabel = new Label { Location = new Point(360, 726), AutoSize = true, ForeColor = Dim };
+            statusLabel = new Label { Location = new Point(trayBtn.Right + 14, 726), AutoSize = true, ForeColor = Dim };
             Controls.AddRange(new Control[] { powerBtn, trayBtn, statusLabel });
+
+            // Discreet language picker in the tab row, at the right edge.
+            var langLabel = new Label { Text = "🌐 " + L.Names[L.Current] + " ▾", AutoSize = true, ForeColor = Dim, Cursor = Cursors.Hand };
+            langLabel.Location = new Point(844 - TextRenderer.MeasureText(langLabel.Text, Font).Width, 288);
+            langLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            var langMenu = new ContextMenuStrip();
+            for (int i = 0; i < L.Codes.Length; i++)
+            {
+                string code = L.Codes[i];
+                var item = new ToolStripMenuItem(L.Names[i]) { Checked = i == L.Current };
+                item.Click += (s, e) => ChangeLanguage(code);
+                langMenu.Items.Add(item);
+            }
+            langLabel.Click += (s, e) => langMenu.Show(langLabel, new Point(0, langLabel.Height));
+            Controls.Add(langLabel);
 
             tray = new NotifyIcon { Icon = Icon, Text = "Alien Keyboard Lights", Visible = true };
             tray.ContextMenuStrip = BuildTrayMenu();
@@ -184,13 +202,13 @@ namespace AlienKeyboardLights
 
         void BuildEffectsTab(Panel p)
         {
-            p.Controls.Add(Caption("Efeito", 0, 0));
+            p.Controls.Add(Caption(L.T("Efeito"), 0, 0));
             modeBox = new ComboBox { Location = new Point(0, 22), Width = 280, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Panel2, ForeColor = Fg, FlatStyle = FlatStyle.Flat, MaxDropDownItems = 20 };
-            modeBox.Items.AddRange(ModeNames);
+            modeBox.Items.AddRange(ModeNames.Select(L.T).ToArray());
             modeBox.SelectedIndexChanged += (s, e) => { Change(() => settings.Mode = (Mode)modeBox.SelectedIndex); UpdateModeUi(); };
             p.Controls.Add(modeBox);
 
-            p.Controls.Add(Caption("Cores  (clique para editar, botão direito para remover)", 300, 0));
+            p.Controls.Add(Caption(L.T("Cores  (clique para editar, botão direito para remover)"), 300, 0));
             colorFlow = new FlowLayoutPanel { Location = new Point(300, 20), Size = new Size(528, 44) };
             p.Controls.Add(colorFlow);
 
@@ -205,28 +223,28 @@ namespace AlienKeyboardLights
             hintLabel = new Label { Location = new Point(0, 150), Size = new Size(828, 22), ForeColor = AccentUi };
             p.Controls.Add(hintLabel);
 
-            p.Controls.Add(Caption("Cor de destaque", 0, 184));
+            p.Controls.Add(Caption(L.T("Cor de destaque"), 0, 184));
             accentSwatch = Swatch(0, 206);
             accentSwatch.Click += (s, e) => { var c = PickColor(settings.Accent); if (c.HasValue) { Change(() => settings.Accent = c.Value); accentSwatch.BackColor = c.Value; } };
             p.Controls.Add(accentSwatch);
-            typingBox = Check("Teclas acendem ao digitar (na cor de destaque)", 130, 184);
+            typingBox = Check(L.T("Teclas acendem ao digitar (na cor de destaque)"), 130, 184);
             typingBox.CheckedChanged += (s, e) => { Change(() => settings.TypingGlow = typingBox.Checked); UpdateHook(); };
-            wasdBox = Check("Destacar WASD e setas (para jogos)", 130, 210);
+            wasdBox = Check(L.T("Destacar WASD e setas (para jogos)"), 130, 210);
             wasdBox.CheckedChanged += (s, e) => Change(() => settings.Wasd = wasdBox.Checked);
-            locksBox = Check("Mostrar Caps Lock e Num Lock ligados", 130, 236);
+            locksBox = Check(L.T("Mostrar Caps Lock e Num Lock ligados"), 130, 236);
             locksBox.CheckedChanged += (s, e) => Change(() => settings.Locks = locksBox.Checked);
             p.Controls.AddRange(new Control[] { typingBox, wasdBox, locksBox });
 
             paintTools = new Panel { Location = new Point(0, 280), Size = new Size(828, 60) };
-            paintTools.Controls.Add(Caption("Pincel", 0, 0));
+            paintTools.Controls.Add(Caption(L.T("Pincel"), 0, 0));
             brushSwatch = Swatch(0, 20);
             brushSwatch.BackColor = brush;
             brushSwatch.Click += (s, e) => { var c = PickColor(brush); if (c.HasValue) { brush = c.Value; brushSwatch.BackColor = c.Value; } };
-            var fill = MakeButton("Preencher tudo", 60, 22, 140);
+            var fill = MakeButton(L.T("Preencher tudo"), 60, 22, 140);
             fill.Click += (s, e) => Change(() => { for (int i = 0; i < settings.Paint.Length; i++) settings.Paint[i] = brush.ToArgb() & 0xFFFFFF; });
-            var clear = MakeButton("Limpar tudo", 210, 22, 120);
+            var clear = MakeButton(L.T("Limpar tudo"), 210, 22, 120);
             clear.Click += (s, e) => Change(() => Array.Clear(settings.Paint, 0, settings.Paint.Length));
-            var fromEffect = MakeButton("Copiar cores atuais da prévia", 340, 22, 230);
+            var fromEffect = MakeButton(L.T("Copiar cores atuais da prévia"), 340, 22, 230);
             fromEffect.Click += (s, e) => Change(() => Array.Copy(engine.Frame, settings.Paint, settings.Paint.Length));
             paintTools.Controls.AddRange(new Control[] { brushSwatch, fill, clear, fromEffect });
             p.Controls.Add(paintTools);
@@ -241,46 +259,50 @@ namespace AlienKeyboardLights
 
         void BuildChassisTab(Panel p)
         {
-            p.Controls.Add(Caption("Luzes do chassi: cabeça alien, touchpad, botão power e anel de luz (Tron)", 0, 0));
+            p.Controls.Add(Caption(L.T("Luzes do chassi: cabeça alien, touchpad, botão power e anel de luz (Tron)"), 0, 0));
             string[] names = { "Acompanhar as cores do teclado", "Usar a cor de destaque (aba Efeitos)", "Desligadas", "Não controlar (deixar como estão)" };
             chassisRadios = new RadioButton[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
                 int index = i;
-                var r = new RadioButton { Text = names[i], Location = new Point(0, 34 + i * 30), AutoSize = true };
+                var r = new RadioButton { Text = L.T(names[i]), Location = new Point(0, 34 + i * 30), AutoSize = true };
                 r.CheckedChanged += (s, e) => { if (r.Checked) Change(() => settings.Chassis = (ChassisMode)index); };
                 chassisRadios[i] = r; p.Controls.Add(r);
             }
             p.Controls.Add(new Label
             {
                 Location = new Point(0, 170), Size = new Size(820, 60), ForeColor = Dim,
-                Text = "As luzes do chassi aparecem na parte de baixo da prévia. A intensidade e o desligamento automático valem para elas também."
+                Text = L.T("As luzes do chassi aparecem na parte de baixo da prévia. A intensidade e o desligamento automático valem para elas também.")
             });
         }
 
         void BuildAutomationTab(Panel p)
         {
-            idleBox = Check("Apagar as luzes depois de", 0, 2);
-            idleNum = Numeric(220, 0, 1, 240, 10);
-            p.Controls.Add(Caption("minutos sem usar o PC (acendem ao mexer)", 290, 3));
-            batteryBox = Check("Na bateria, reduzir a intensidade para", 0, 42);
-            batteryNum = Numeric(290, 40, 0, 100, 30);
-            p.Controls.Add(Caption("%", 360, 43));
-            nightBox = Check("Modo noturno: desligar das", 0, 82);
-            nightStart = TimePicker(220, 80);
-            p.Controls.Add(Caption("às", 320, 83));
-            nightEnd = TimePicker(346, 80);
-            startupBox = Check("Iniciar com o Windows (fica na bandeja)", 0, 132);
+            idleBox = Check(L.T("Apagar as luzes depois de"), 0, 0);
+            idleNum = Numeric(0, 0, 1, 240, 10);
+            batteryBox = Check(L.T("Na bateria, reduzir a intensidade para"), 0, 0);
+            batteryNum = Numeric(0, 0, 0, 100, 30);
+            nightBox = Check(L.T("Modo noturno: desligar das"), 0, 0);
+            nightStart = TimePicker(0, 0);
+            nightEnd = TimePicker(0, 0);
+            // Each sentence is laid out left to right, since its parts change length with the language.
+            Row(p, 0, idleBox, idleNum, Caption(L.T("minutos sem usar o PC (acendem ao mexer)"), 0, 0));
+            Row(p, 40, batteryBox, batteryNum, Caption(L.T("%"), 0, 0));
+            Row(p, 80, nightBox, nightStart, Caption(L.T("às"), 0, 0), nightEnd);
+            startupBox = Check(L.T("Iniciar com o Windows (fica na bandeja)"), 0, 132);
             startupBox.Checked = IsStartupEnabled();
             startupBox.CheckedChanged += (s, e) => SetStartup(startupBox.Checked);
-            hotkeysBox = Check("Atalhos globais de teclado:", 0, 172);
-            p.Controls.Add(new Label
+            hotkeysBox = Check(L.T("Atalhos globais de teclado:"), 0, 172);
+            string[,] shortcuts = {
+                { "Ctrl+Shift+F12", L.T("ligar/desligar luzes") }, { "Ctrl+Shift+F11", L.T("próximo efeito") },
+                { "Ctrl+Shift+F8", L.T("próximo tema") }, { "Ctrl+Shift+F9 / F10", L.T("diminuir / aumentar intensidade") }
+            };
+            for (int i = 0; i < shortcuts.GetLength(0); i++)
             {
-                Location = new Point(20, 198), Size = new Size(800, 110), ForeColor = Dim,
-                Text = "Ctrl+Shift+F12  ligar/desligar luzes\nCtrl+Shift+F11  próximo efeito\nCtrl+Shift+F8    próximo tema\n" +
-                       "Ctrl+Shift+F9 / F10  diminuir / aumentar intensidade"
-            });
-            p.Controls.AddRange(new Control[] { idleBox, idleNum, batteryBox, batteryNum, nightBox, nightStart, nightEnd, startupBox, hotkeysBox });
+                p.Controls.Add(new Label { Text = shortcuts[i, 0], Location = new Point(20, 198 + i * 20), AutoSize = true, ForeColor = Dim });
+                p.Controls.Add(new Label { Text = shortcuts[i, 1], Location = new Point(170, 198 + i * 20), AutoSize = true, ForeColor = Dim });
+            }
+            p.Controls.AddRange(new Control[] { startupBox, hotkeysBox });
 
             EventHandler save = (s, e) => SaveAutomation();
             idleBox.CheckedChanged += save; idleNum.ValueChanged += save;
@@ -300,33 +322,37 @@ namespace AlienKeyboardLights
             profileList.DoubleClick += (s, e) => ApplySelectedProfile();
             p.Controls.Add(profileList);
 
-            p.Controls.Add(Caption("Nome do perfil", 420, 0));
+            p.Controls.Add(Caption(L.T("Nome do perfil"), 420, 0));
             profileName = TextInput(420, 20, 400);
-            p.Controls.Add(Caption("Ativar automaticamente com o app (opcional, ex.: Diablo IV.exe)", 420, 56));
+            p.Controls.Add(Caption(L.T("Ativar automaticamente com o app (opcional)"), 420, 56));
             profileApp = TextInput(420, 76, 300);
-            var browse = MakeButton("Procurar...", 726, 74, 94);
+            var browse = MakeButton(L.T("Procurar..."), 726, 74, 94);
             browse.Click += (s, e) =>
             {
-                using (var dlg = new OpenFileDialog { Filter = "Programas (*.exe)|*.exe" })
+                using (var dlg = new OpenFileDialog { Filter = L.T("Programas (*.exe)|*.exe") })
                     if (dlg.ShowDialog(this) == DialogResult.OK) profileApp.Text = Path.GetFileName(dlg.FileName);
             };
-            var saveBtn = MakeButton("Salvar o visual atual neste perfil", 420, 120, 400);
+            var saveBtn = MakeButton(L.T("Salvar o visual atual neste perfil"), 420, 120, 400);
             saveBtn.Click += (s, e) => SaveProfile();
-            var applyBtn = MakeButton("Aplicar perfil selecionado", 420, 160, 196);
+            var applyBtn = MakeButton(L.T("Aplicar perfil selecionado"), 420, 160, 196);
             applyBtn.Click += (s, e) => ApplySelectedProfile();
-            var delBtn = MakeButton("Excluir perfil", 624, 160, 196);
+            var delBtn = MakeButton(L.T("Excluir perfil"), 624, 160, 196);
             delBtn.Click += (s, e) =>
             {
                 var pr = profileList.SelectedItem as Profile;
-                if (pr != null && MessageBox.Show(this, "Excluir o perfil \"" + pr.Name + "\"?", Text, MessageBoxButtons.YesNo) == DialogResult.Yes)
+                if (pr != null && MessageBox.Show(this, string.Format(L.T("Excluir o perfil \"{0}\"?"), pr.Name), Text, MessageBoxButtons.YesNo) == DialogResult.Yes)
                 { pr.Delete(); RefreshProfiles(); }
             };
-            autoBox = Check("Trocar de perfil sozinho quando o app estiver em primeiro plano", 420, 210);
+            autoBox = Check(L.T("Trocar de perfil sozinho quando o app estiver em primeiro plano"), 420, 210);
+            autoBox.AutoSize = false;
+            autoBox.Size = new Size(408, 42);
+            autoBox.CheckAlign = ContentAlignment.TopLeft;
+            autoBox.TextAlign = ContentAlignment.TopLeft;
             autoBox.CheckedChanged += (s, e) => { lock (settings) settings.AutoProfiles = autoBox.Checked; SaveIfManual(); };
             p.Controls.Add(new Label
             {
-                Location = new Point(420, 240), Size = new Size(400, 90), ForeColor = Dim,
-                Text = "Ex.: crie um perfil \"Jogo\" com WASD destacado e associe ao .exe do jogo. Ao sair do jogo, o visual normal volta sozinho."
+                Location = new Point(420, 258), Size = new Size(408, 80), ForeColor = Dim,
+                Text = L.T("Ex.: crie um perfil \"Jogo\" com WASD destacado e associe ao .exe do jogo (como Diablo IV.exe). Ao sair do jogo, o visual normal volta sozinho.")
             });
             p.Controls.AddRange(new Control[] { profileName, profileApp, browse, saveBtn, applyBtn, delBtn, autoBox });
             RefreshProfiles();
@@ -335,14 +361,14 @@ namespace AlienKeyboardLights
         ContextMenuStrip BuildTrayMenu()
         {
             var menu = new ContextMenuStrip();
-            menu.Items.Add("Abrir", null, (s, e) => ShowFromTray());
-            menu.Items.Add("Ligar / desligar luzes", null, (s, e) => ToggleLights());
-            menu.Items.Add("Próximo tema", null, (s, e) => NextTheme());
-            var themes = new ToolStripMenuItem("Temas");
-            foreach (var th in Themes) { var t = th; themes.DropDownItems.Add(t.Name, null, (s, e) => ApplyTheme(t)); }
+            menu.Items.Add(L.T("Abrir"), null, (s, e) => ShowFromTray());
+            menu.Items.Add(L.T("Ligar / desligar luzes"), null, (s, e) => ToggleLights());
+            menu.Items.Add(L.T("Próximo tema"), null, (s, e) => NextTheme());
+            var themes = new ToolStripMenuItem(L.T("Temas"));
+            foreach (var th in Themes) { var t = th; themes.DropDownItems.Add(L.T(t.Name), null, (s, e) => ApplyTheme(t)); }
             menu.Items.Add(themes);
             menu.Items.Add("-");
-            menu.Items.Add("Sair", null, (s, e) => { reallyExit = true; Close(); });
+            menu.Items.Add(L.T("Sair"), null, (s, e) => { reallyExit = true; Close(); });
             return menu;
         }
 
@@ -427,14 +453,14 @@ namespace AlienKeyboardLights
 
         void UpdateLabels()
         {
-            brightLabel.Text = "Intensidade: " + brightBar.Value + "%";
-            speedLabel.Text = "Velocidade: " + speedBar.Value;
+            brightLabel.Text = L.T("Intensidade: ") + brightBar.Value + "%";
+            speedLabel.Text = L.T("Velocidade: ") + speedBar.Value;
         }
 
         void UpdateModeUi()
         {
             int m = Math.Max(0, modeBox.SelectedIndex);
-            hintLabel.Text = ModeHints[m];
+            hintLabel.Text = L.T(ModeHints[m]);
             paintTools.Visible = (Mode)m == Mode.Paint;
             preview.PaintMode = (Mode)m == Mode.Paint;
             UpdateHook();
@@ -453,10 +479,10 @@ namespace AlienKeyboardLights
             engine.CapsOn = IsKeyLocked(Keys.CapsLock);
             engine.NumOn = IsKeyLocked(Keys.NumLock);
             bool on; lock (settings) on = settings.LightsOn;
-            powerBtn.Text = on ? "Desligar luzes" : "Ligar luzes";
+            powerBtn.Text = on ? L.T("Desligar luzes") : L.T("Ligar luzes");
             string info = engine.Info;
             statusLabel.Text = engine.Status + (string.IsNullOrEmpty(info) ? "" : "  ·  " + info)
-                + (autoProfile != null ? "  ·  perfil automático: " + autoProfile.Name : "");
+                + (autoProfile != null ? "  ·  " + L.T("perfil automático: ") + autoProfile.Name : "");
         }
 
         void RebuildColors()
@@ -516,10 +542,10 @@ namespace AlienKeyboardLights
         void SaveProfile()
         {
             string name = new string(profileName.Text.Trim().Where(ch => Path.GetInvalidFileNameChars().All(x => x != ch)).ToArray());
-            if (name.Length == 0) { MessageBox.Show(this, "Digite um nome para o perfil.", Text); return; }
+            if (name.Length == 0) { MessageBox.Show(this, L.T("Digite um nome para o perfil."), Text); return; }
             var p = new Profile { Name = name, App = profileApp.Text.Trim() };
             lock (settings) p.Lighting.CopyLightingFrom(settings);
-            try { p.Save(); } catch (Exception ex) { MessageBox.Show(this, "Não foi possível salvar: " + ex.Message, Text); return; }
+            try { p.Save(); } catch (Exception ex) { MessageBox.Show(this, L.T("Não foi possível salvar: ") + ex.Message, Text); return; }
             RefreshProfiles();
         }
 
@@ -614,7 +640,7 @@ namespace AlienKeyboardLights
         void HideToTray()
         {
             Hide();
-            if (!balloonShown) { balloonShown = true; tray.ShowBalloonTip(1500, "Alien Keyboard Lights", "Continua rodando aqui na bandeja.", ToolTipIcon.Info); }
+            if (!balloonShown) { balloonShown = true; tray.ShowBalloonTip(1500, "Alien Keyboard Lights", L.T("Continua rodando aqui na bandeja."), ToolTipIcon.Info); }
         }
 
         void ShowFromTray() { Show(); WindowState = FormWindowState.Normal; Activate(); }
@@ -658,7 +684,44 @@ namespace AlienKeyboardLights
             }
         }
 
+        // ---------------- language ----------------
+
+        // Set when the window closes to be rebuilt in another language (see Program.Main).
+        public static bool RestartRequested;
+
+        void ChangeLanguage(string code)
+        {
+            if (code == L.Code) return;
+            lock (settings)
+            {
+                if (beforeAuto != null) settings.CopyLightingFrom(beforeAuto); // never persist a temporary auto profile
+                settings.Language = code;
+            }
+            settings.Save();
+            RestartRequested = true;
+            reallyExit = true;
+            Close();
+        }
+
         // ---------------- control factories ----------------
+
+        // Places controls side by side on one line (vertically centered on the row).
+        static void Row(Panel p, int y, params Control[] parts)
+        {
+            int x = 0;
+            foreach (var c in parts)
+            {
+                p.Controls.Add(c);
+                var size = c.AutoSize ? c.PreferredSize : c.Size;
+                c.Location = new Point(x, y + Math.Max(0, (26 - size.Height) / 2));
+                x += size.Width + 6;
+            }
+        }
+
+        int FitWidth(int min, params string[] texts)
+        {
+            return Math.Max(min, texts.Max(t => TextRenderer.MeasureText(t, Font).Width) + 28);
+        }
 
         Color? PickColor(Color initial)
         {
@@ -682,7 +745,7 @@ namespace AlienKeyboardLights
                     g.FillRectangle(br, r);
                 }
                 using (var shade = new SolidBrush(Color.FromArgb(130, 0, 0, 0))) g.FillRectangle(shade, 0, r.Height - 22, r.Width, 22);
-                TextRenderer.DrawText(g, th.Name, Font, new Rectangle(0, r.Height - 22, r.Width, 22), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                TextRenderer.DrawText(g, L.T(th.Name), Font, new Rectangle(0, r.Height - 22, r.Width, 22), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             };
             b.Click += (s, e) => ApplyTheme(th);
             return b;
@@ -756,7 +819,7 @@ namespace AlienKeyboardLights
     // Live drawing of the keyboard and chassis lights; in paint mode, clicks paint keys.
     class PreviewPanel : Control
     {
-        static readonly string[] ChassisLabels = { "Alien", "Touchpad", "Power", "Anel ↑", "Anel ↓" };
+        readonly string[] ChassisLabels = { "Alien", "Touchpad", "Power", L.T("Anel") + " ↑", L.T("Anel") + " ↓" };
         static readonly string[] KeyLabels = BuildKeyLabels();
 
         // Physical keys that sit over several lights; each is drawn (and painted) as one key.

@@ -46,6 +46,7 @@ namespace AlienKeyboardLights
         public int NightStart = 23 * 60, NightEnd = 7 * 60;
         public bool Hotkeys = true;
         public bool AutoProfiles = true;
+        public string Language = "";   // empty = follow Windows
 
         public int Version;            // bumped on every change
 
@@ -84,7 +85,7 @@ namespace AlienKeyboardLights
             if (!lightingOnly)
                 l.AddRange(new[] {
                     "lightson=" + LightsOn, "idle=" + IdleMinutes, "batterydim=" + BatteryDim, "batterylevel=" + BatteryLevel,
-                    "night=" + NightOn, "nightstart=" + NightStart, "nightend=" + NightEnd, "hotkeys=" + Hotkeys, "autoprofiles=" + AutoProfiles
+                    "night=" + NightOn, "nightstart=" + NightStart, "nightend=" + NightEnd, "hotkeys=" + Hotkeys, "autoprofiles=" + AutoProfiles, "language=" + Language
                 });
             return l;
         }
@@ -128,6 +129,7 @@ namespace AlienKeyboardLights
                         case "nightend": NightEnd = Clamp(int.Parse(v), 0, 1439); break;
                         case "hotkeys": Hotkeys = bool.Parse(v); break;
                         case "autoprofiles": AutoProfiles = bool.Parse(v); break;
+                        case "language": Language = v; break;
                     }
                 }
                 catch { }
